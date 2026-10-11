@@ -1,0 +1,8 @@
+{
+  "name": "invert-news",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check-news.js"
+  }
+}
