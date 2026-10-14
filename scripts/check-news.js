@@ -38,6 +38,16 @@ for (const article of articles) {
   if (article.date > tomorrow) found.push(`${article.slug}.md: dated in the future`);
 }
 
+// No long dash. The founder (14.10.2026): readers dislike AI-written text, and the long dash is its
+// best-known mark. A colon, a comma, brackets, a full stop say the same; a range or a route takes a hyphen.
+for (const name of fs.readdirSync(folder).sort()) {
+  if (name.startsWith('.') || !name.endsWith('.md')) continue;
+  fs.readFileSync(path.join(folder, name), 'utf8').split('\n').forEach((line, i) => {
+    const m = line.match(/[\u2014\u2013]/);
+    if (m) found.push(`${name}, line ${i + 1}: a long dash «${m[0]}». Rewrite the sentence without it: a colon, a comma, brackets or a full stop; a range takes a hyphen («10-20», «Алматы-Хоргос»)`);
+  });
+}
+
 for (const line of found) console.error(`news/${line}`);
 console.log(found.length ? `\n${found.length} problem(s) in news/` : `news/: ${articles.length} article(s), all read`);
 process.exit(found.length ? 1 : 0);
