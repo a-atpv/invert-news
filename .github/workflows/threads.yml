@@ -1,0 +1,57 @@
+# The news of invert.kz in the Threads profile of Invert (INV-398), by scripts/threads.js.
+# Slots: 09:00, 13:00 and 19:00 Almaty (UTC+5), one article each. A push that changes news/
+# takes down the posts of deleted or corrected articles at once. The token is extended on Mondays.
+# To stop publishing, set the repository variable THREADS_MODE to anything but «live».
+name: Threads
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # 09:00 Алматы
+    - cron: '0 8 * * *'   # 13:00 Алматы
+    - cron: '0 14 * * *'  # 19:00 Алматы
+    - cron: '30 2 * * 1'  # понедельник, 07:30 Алматы: продление ключа
+  push:
+    branches: [main]
+    paths: ['news/**']
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'preview: что вышло бы сейчас; post: опубликовать следующую; sync: снять удалённые; refresh: продлить ключ; whoami: проверить ключ'
+        type: choice
+        options: [preview, post, sync, refresh, whoami]
+        default: preview
+
+concurrency:
+  group: threads
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  threads:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          CHOSEN: ${{ inputs.task }}
+          THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
+          GH_SECRETS_TOKEN: ${{ secrets.GH_SECRETS_TOKEN }}
+          THREADS_MODE: ${{ vars.THREADS_MODE }}
+          THREADS_SINCE: ${{ vars.THREADS_SINCE }}
+          THREADS_USERNAME: ${{ vars.THREADS_USERNAME }}
+          THREADS_TOPIC: ${{ vars.THREADS_TOPIC }}
+        run: |
+          case "$EVENT" in
+            schedule) if [ "$SCHEDULE" = '30 2 * * 1' ]; then task=refresh; else task=post; fi ;;
+            push) task=sync ;;
+            *) task="$CHOSEN" ;;
+          esac
+          node scripts/threads.js "$task"
